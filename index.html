@@ -659,7 +659,7 @@
 
         <div id="hud" class="hud" style="display: none;">
             <div>Puntos: <span id="score">0</span></div>
-            <div class="lives">Vidas: <span id="lives">3</span></div>
+            <div class="lives">Vidas: <span id="lives">5</span></div>
             <div>Salud:</div>
             <div class="health-bar">
                 <div id="healthFill" class="health-fill" style="width: 100%;"></div>
@@ -701,7 +701,7 @@
                 this.selectedShip = 'fighter'; // Nave por defecto
                 this.gameState = 'splash'; // Cambiar estado inicial a splash
                 this.score = 0;
-                this.lives = 3;
+                this.lives = 5;
                 this.health = 100;
                 this.maxHealth = 100;
                 this.mission = 1;
@@ -771,6 +771,8 @@
                 this.enemyBullets = [];
                 this.explosions = [];
                 this.stars = [];
+        this.comets = [];
+        this.lastCometTime = 0;
                 this.powerUps = [];
                 this.doubleFire = false;
                 this.shieldActive = false;
@@ -1428,7 +1430,7 @@
             startGame() {
                 this.gameState = 'playing';
                 this.score = 0;
-                this.lives = 3;
+                this.lives = 5;
                 this.mission = 1;
                 this.enemiesKilled = 0;
                 this.bossActive = false;
@@ -1588,6 +1590,25 @@
             }
 
             update() {
+        // Generar cometas decorativos aleatorios
+        if (Date.now() - this.lastCometTime > 3000 + Math.random()*4000) {
+            this.lastCometTime = Date.now();
+            this.comets.push({
+                x: Math.random() * this.canvas.width,
+                y: -20,
+                vx: (Math.random() < 0.5 ? -1 : 1) * (1 + Math.random()*2),
+                vy: 3 + Math.random()*2,
+                color: ['#ffffff','#66ccff','#ff99ff'][Math.floor(Math.random()*3)]
+            });
+        }
+
+        // Mover cometas
+        this.comets.forEach((comet, i) => {
+            comet.x += comet.vx;
+            comet.y += comet.vy;
+        });
+        this.comets = this.comets.filter(c => c.y < this.canvas.height+40 && c.x > -40 && c.x < this.canvas.width+40);
+    
                 if (this.gameState !== 'playing') return;
 
                 this.updatePlayer();
@@ -2368,10 +2389,159 @@ updateUI() {
                 }
             }
 
-            render() {
+            
+            drawEnemy(enemy) {
+                const ctx = this.ctx;
+                ctx.save();
+                const cx = enemy.x + (enemy.width || 20) / 2;
+                const cy = enemy.y + (enemy.height || 20) / 2;
+                ctx.translate(cx, cy);
+
+                // Glow
+                ctx.shadowColor = 'rgba(255,255,255,0.15)';
+                ctx.shadowBlur = 12;
+
+                switch (enemy.type) {
+                    case 'normal':
+                        // Triangular con degradado y cabina
+                        let g1 = ctx.createLinearGradient(-12, -12, 12, 12);
+                        g1.addColorStop(0, '#33ffcc');
+                        g1.addColorStop(1, '#00aabb');
+                        ctx.fillStyle = g1;
+                        ctx.beginPath();
+                        ctx.moveTo(0, -(enemy.height||24)/2);
+                        ctx.lineTo((enemy.width||30)/2, (enemy.height||24)/2);
+                        ctx.lineTo(-(enemy.width||30)/2, (enemy.height||24)/2);
+                        ctx.closePath();
+                        ctx.fill();
+                        // Cabina
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(0, -2, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+
+                    case 'zigzag':
+                        // Alas en X con núcleo
+                        ctx.lineWidth = 3;
+                        ctx.strokeStyle = '#55ff88';
+                        ctx.beginPath();
+                        ctx.moveTo(-14, -12);
+                        ctx.lineTo(14, 12);
+                        ctx.moveTo(14, -12);
+                        ctx.lineTo(-14, 12);
+                        ctx.stroke();
+                        ctx.fillStyle = '#00ff88';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+
+                    case 'circular':
+                        // Dron con gradiente radial y núcleo luminoso
+                        const rg = ctx.createRadialGradient(0, 0, 3, 0, 0, 18);
+                        rg.addColorStop(0, '#aaffff');
+                        rg.addColorStop(0.6, '#00aaff');
+                        rg.addColorStop(1, '#003344');
+                        ctx.fillStyle = rg;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Núcleo brillante
+                        ctx.fillStyle = '#ffffff';
+                        ctx.globalAlpha = 0.9;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.globalAlpha = 1;
+                        break;
+
+                    case 'diagonal':
+                        // Nave estilizada diagonal
+                        ctx.fillStyle = '#aa00ff';
+                        ctx.beginPath();
+                        ctx.moveTo(-10, -(enemy.height||20)/2);
+                        ctx.lineTo((enemy.width||30)/2, 0);
+                        ctx.lineTo(-10, (enemy.height||20)/2);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.fillStyle = '#ff77ff';
+                        ctx.fillRect(-3, -2, 6, 4);
+                        break;
+
+                    case 'heavy':
+                        // Blindado con cañones
+                        ctx.fillStyle = '#884400';
+                        ctx.fillRect(-(enemy.width||36)/2, -(enemy.height||22)/2, (enemy.width||36), (enemy.height||22));
+                        ctx.fillStyle = '#ffaa00';
+                        ctx.fillRect(-6, -6, 12, 12);
+                        // Cañones
+                        ctx.fillStyle = '#222';
+                        ctx.fillRect(-(enemy.width||36)/2 - 2, -2, 6, 4);
+                        ctx.fillRect((enemy.width||36)/2 - 4, -2, 6, 4);
+                        break;
+
+                    case 'kamikaze':
+                        // Puntiagudo agresivo
+                        ctx.fillStyle = '#ff0033';
+                        ctx.beginPath();
+                        ctx.moveTo(0, -(enemy.height||30)/2 - 2);
+                        ctx.lineTo((enemy.width||30)/2 + 2, (enemy.height||30)/2);
+                        ctx.lineTo(-(enemy.width||30)/2 - 2, (enemy.height||30)/2);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+
+                    default:
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(-(enemy.width||30)/2, -(enemy.height||20)/2, enemy.width || 30, enemy.height || 20);
+                }
+
+                // Barrita de salud pequeña sobre la nave
+                const healthRatio = enemy.maxHealth ? Math.max(0, enemy.health / enemy.maxHealth) : 1;
+                if (enemy.maxHealth && healthRatio < 1) {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(-(enemy.width||30)/2, (enemy.height||20)/2 + 6, enemy.width || 30, 6);
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(-(enemy.width||30)/2 + 1, (enemy.height||20)/2 + 7, (enemy.width || 30 - 2) * healthRatio, 4);
+                }
+
+                ctx.restore();
+            }
+
+
+            drawComet(comet) {
+                const ctx = this.ctx;
+                // Cola con gradiente
+                const grad = ctx.createLinearGradient(comet.x, comet.y, comet.x - comet.vx*12, comet.y - comet.vy*12);
+                grad.addColorStop(0, comet.color);
+                grad.addColorStop(1, 'transparent');
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(comet.x, comet.y);
+                ctx.lineTo(comet.x - comet.vx*12, comet.y - comet.vy*12);
+                ctx.stroke();
+
+                // Núcleo brillante
+                ctx.fillStyle = comet.color;
+                ctx.beginPath();
+                ctx.arc(comet.x, comet.y, 4, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+render() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
                 // Fondo estrellado
+
+                // Cometas decorativos
+                this.comets.forEach(comet => this.drawComet(comet));
+    
                 this.ctx.fillStyle = '#ffffff';
                 this.stars.forEach(star => {
                     this.ctx.fillRect(star.x, star.y, star.size, star.size);
@@ -2396,93 +2566,10 @@ updateUI() {
 
                 // Enemigos con diseños diferentes según su tipo
                 this.enemies.forEach(enemy => {
-                    switch(enemy.type) {
-                        case 'heavy':
-                            // Enemigo pesado - más grande y resistente
-                            this.ctx.fillStyle = '#ff0080';
-                            this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-                            this.ctx.fillStyle = '#cc0060';
-                            this.ctx.fillRect(enemy.x + 3, enemy.y + 3, enemy.width - 6, enemy.height - 6);
-                            // Añadir detalles de armadura
-                            this.ctx.fillStyle = '#ffffff';
-                            this.ctx.fillRect(enemy.x + 6, enemy.y + 6, 4, 4);
-                            this.ctx.fillRect(enemy.x + 15, enemy.y + 6, 4, 4);
-                            this.ctx.fillRect(enemy.x + 6, enemy.y + 15, 4, 4);
-                            this.ctx.fillRect(enemy.x + 15, enemy.y + 15, 4, 4);
-                            break;
-                            
-                        case 'zigzag':
-                            // Enemigo zigzag - forma más aerodinámica
-                            this.ctx.fillStyle = '#ff6600';
-                            this.ctx.fillRect(enemy.x + 6, enemy.y, 12, 4);
-                            this.ctx.fillStyle = '#ff8800';
-                            this.ctx.fillRect(enemy.x + 2, enemy.y + 4, 20, 8);
-                            this.ctx.fillStyle = '#ffaa00';
-                            this.ctx.fillRect(enemy.x, enemy.y + 12, enemy.width, 8);
-                            this.ctx.fillStyle = '#ffcc00';
-                            this.ctx.fillRect(enemy.x + 4, enemy.y + 20, 16, 4);
-                            // Alerones laterales
-                            this.ctx.fillStyle = '#ff4400';
-                            this.ctx.fillRect(enemy.x - 2, enemy.y + 8, 4, 8);
-                            this.ctx.fillRect(enemy.x + 23, enemy.y + 8, 4, 8);
-                            break;
-                            
-                        case 'circular':
-                            // Enemigo circular - forma redonda
-                            this.ctx.fillStyle = '#8800ff';
-                            this.ctx.beginPath();
-                            this.ctx.arc(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.width/2, 0, Math.PI * 2);
-                            this.ctx.fill();
-                            this.ctx.fillStyle = '#aa00ff';
-                            this.ctx.beginPath();
-                            this.ctx.arc(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.width/3, 0, Math.PI * 2);
-                            this.ctx.fill();
-                            this.ctx.fillStyle = '#cc00ff';
-                            this.ctx.beginPath();
-                            this.ctx.arc(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.width/5, 0, Math.PI * 2);
-                            this.ctx.fill();
-                            break;
-                            
-                        case 'diagonal':
-                            // Enemigo diagonal - forma asimétrica
-                            this.ctx.fillStyle = '#00ff88';
-                            // Forma de flecha asimétrica
-                            this.ctx.beginPath();
-                            this.ctx.moveTo(enemy.x + enemy.width/2, enemy.y);
-                            this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height/2);
-                            this.ctx.lineTo(enemy.x + enemy.width - 5, enemy.y + enemy.height);
-                            this.ctx.lineTo(enemy.x + 5, enemy.y + enemy.height);
-                            this.ctx.lineTo(enemy.x, enemy.y + enemy.height/2);
-                            this.ctx.closePath();
-                            this.ctx.fill();
-                            // Detalles internos
-                            this.ctx.fillStyle = '#00cc66';
-                            this.ctx.fillRect(enemy.x + 8, enemy.y + 8, 8, 8);
-                            break;
-                            
-                        case 'normal':
-                        default:
-                            // Enemigo normal - diseño original
-                            this.ctx.fillStyle = '#ff4400';
-                            this.ctx.fillRect(enemy.x + 8, enemy.y, 8, 4);
-                            this.ctx.fillStyle = '#ff6600';
-                            this.ctx.fillRect(enemy.x + 4, enemy.y + 4, 16, 8);
-                            this.ctx.fillStyle = '#ff8800';
-                            this.ctx.fillRect(enemy.x, enemy.y + 12, enemy.width, 6);
-                            this.ctx.fillStyle = '#ffaa00';
-                            this.ctx.fillRect(enemy.x + 6, enemy.y + 18, 12, 4);
-                            break;
-                    }
-                    
-                    // Mostrar barra de vida para enemigos dañados
-                    if (enemy.health < enemy.maxHealth) {
-                        const healthPercentage = enemy.health / enemy.maxHealth;
-                        this.ctx.fillStyle = '#ff0000';
-                        this.ctx.fillRect(enemy.x, enemy.y - 6, enemy.width, 2);
-                        this.ctx.fillStyle = '#00ff00';
-                        this.ctx.fillRect(enemy.x, enemy.y - 6, enemy.width * healthPercentage, 2);
-                    }
+                    this.drawEnemy(enemy);
                 });
+
+
 
                 // Jefe (SOLO RENDERIZAR SI ESTÁ VIVO)
                 if (this.boss && this.boss.alive) {
