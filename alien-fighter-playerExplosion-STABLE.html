@@ -1,0 +1,2705 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Alien Fighter Mobile</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(45deg, #0a0015, #1a0030);
+            font-family: 'Orbitron', monospace;
+            overflow: hidden;
+            color: #00ff00;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #gameCanvas {
+            border: 2px solid #00ffff;
+            display: block;
+            margin: 0 auto;
+            background: #000011;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            max-width: 100vw;
+            max-height: 70vh;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: radial-gradient(ellipse at center, #1a0040 0%, #000000 100%);
+            padding: 10px;
+        }
+
+       .menu {
+            text-align: center;
+            background: rgba(0, 20, 40, 0.9);
+            padding: 20px;
+            border: 3px solid #00ffff;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px #00ffff40;
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .menu::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .menu::-webkit-scrollbar-track {
+            background: rgba(0, 50, 100, 0.3);
+            border-radius: 4px;
+        }
+
+        .menu::-webkit-scrollbar-thumb {
+            background: #00ffff;
+            border-radius: 4px;
+        }
+
+        .menu::-webkit-scrollbar-thumb:hover {
+            background: #00aaff;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .difficulty-btn, .start-btn, .control-btn, .continue-btn, .ship-btn {
+            display: inline-block;
+            margin: 5px;
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #003366, #0066cc);
+            border: 2px solid #00ffff;
+            color: #ffffff;
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(12px, 3vw, 16px);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            font-weight: bold;
+            touch-action: manipulation;
+        }
+
+        .difficulty-btn:active, .start-btn:active, .control-btn:active, .continue-btn:active, .ship-btn:active {
+            background: linear-gradient(45deg, #0066cc, #00aaff);
+            box-shadow: 0 0 20px #00ffff;
+            transform: scale(0.95);
+        }
+
+        .difficulty-btn.selected, .ship-btn.selected {
+            background: linear-gradient(45deg, #cc0066, #ff0080);
+            border-color: #ff0080;
+            box-shadow: 0 0 25px #ff0080;
+        }
+
+        .continue-btn {
+            background: linear-gradient(45deg, #006600, #00cc00);
+            border: 2px solid #00ff00;
+        }
+
+        .continue-btn:active {
+            background: linear-gradient(45deg, #00cc00, #00ff00);
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        .ship-selection {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin: 20px 0;
+            max-width: 100%;
+        }
+
+        .ship-card {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 30, 60, 0.7);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .ship-card:hover, .ship-card.selected {
+            background: rgba(0, 50, 100, 0.9);
+            border-color: #ff0080;
+            box-shadow: 0 0 20px #ff008040;
+        }
+
+        .ship-preview {
+            width: 60px;
+            height: 60px;
+            background: #000;
+            border: 1px solid #00ffff;
+            margin-right: 15px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ship-info {
+            flex: 1;
+        }
+
+        .ship-name {
+            color: #00ffff;
+            font-size: clamp(14px, 3.5vw, 18px);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .ship-stats {
+            font-size: clamp(10px, 2.5vw, 12px);
+            color: #ffffff;
+            line-height: 1.4;
+        }
+
+        .stat-bar {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            margin: 2px 0;
+            border-radius: 2px;
+        }
+
+        .stat-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .stat-speed { background: #00ff00; }
+        .stat-damage { background: #ff4400; }
+        .stat-health { background: #0088ff; }
+
+        .mobile-controls {
+            position: fixed;
+            bottom: 5px;
+            left: 0;
+            right: 0;
+            display: none;
+            z-index: 200;
+            pointer-events: none;
+        }
+
+        .mobile-controls > * {
+            pointer-events: all;
+        }
+
+        .movement-controls {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            display: grid;
+            grid-template-columns: 45px 45px 45px;
+            grid-template-rows: 45px 45px 45px;
+            gap: 4px;
+        }
+
+        .move-btn {
+            background: rgba(0, 100, 200, 0.7);
+            border: 1px solid #00ffff;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .move-btn:active {
+            background: rgba(0, 150, 255, 0.9);
+            transform: scale(0.9);
+        }
+
+        .move-btn.up { grid-column: 2; grid-row: 1; }
+        .move-btn.down { grid-column: 2; grid-row: 3; }
+        .move-btn.left { grid-column: 1; grid-row: 2; }
+        .move-btn.right { grid-column: 3; grid-row: 2; }
+
+        .fire-controls {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+        }
+
+        .fire-btn {
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, #ff0080, #cc0066);
+            border: 2px solid #ff00ff;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            box-shadow: 0 0 15px #ff0080;
+        }
+
+        .fire-btn:active {
+            background: radial-gradient(circle, #ff00ff, #ff0080);
+            transform: scale(0.9);
+            box-shadow: 0 0 25px #ff00ff;
+        }
+
+        .hud {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: #00ff00;
+            font-size: clamp(10px, 2.5vw, 14px);
+            text-shadow: 0 0 10px #00ff00;
+            z-index: 100;
+        }
+
+        .health-bar {
+            width: clamp(150px, 25vw, 200px);
+            height: 15px;
+            border: 2px solid #ff0000;
+            margin: 5px 0;
+            background: #330000;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffaa00);
+            transition: width 0.3s;
+        }
+
+        .lives {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        .mission-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            color: #00ffff;
+            text-align: right;
+            font-size: clamp(10px, 2.5vw, 14px);
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .game-over, .mission-complete {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 20px;
+            border: 3px solid #ff0080;
+            border-radius: 15px;
+            text-align: center;
+            color: #ffffff;
+            z-index: 300;
+            max-width: 90vw;
+        }
+
+       .boss-health {
+            position: fixed;
+            top: 80px;
+            right: 10px;
+            width: clamp(180px, 40vw, 250px);
+            text-align: center;
+            color: #ff0080;
+            z-index: 150;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .boss-health.visible {
+            display: block;
+            opacity: 1;
+        }
+
+        .boss-health-bar {
+            width: 100%;
+            height: 20px;
+            border: 2px solid #ff0080;
+            background: #330011;
+            margin-top: 5px;
+        }
+
+        .boss-health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0080, #ff6600);
+            transition: width 0.3s;
+        }
+
+        .difficulty-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        @media (max-width: 480px) {
+            .difficulty-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .movement-controls {
+                transform: scale(0.85);
+            }
+            
+            .fire-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 18px;
+            }
+
+            .ship-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .ship-preview {
+                margin: 0 0 10px 0;
+            }
+        }
+
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(ellipse at center, #001122 0%, #000000 70%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+            cursor: pointer;
+        }
+
+        .splash-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .studio-logo {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: 900;
+            color: #00ffff;
+            text-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff;
+            margin-bottom: 20px;
+            animation: logoGlow 2s ease-in-out infinite alternate;
+        }
+
+        .studio-subtitle {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(0.8rem, 3vw, 1.2rem);
+            color: #888888;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 40px;
+            animation: subtitleFade 3s ease-in-out;
+        }
+
+        .logo-symbol {
+            width: 80px;
+            height: 80px;
+            border: 3px solid #00ffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            animation: symbolRotate 4s linear infinite;
+            box-shadow: 0 0 30px #00ffff40;
+        }
+
+        .logo-symbol::before {
+            content: "I";
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 0 20px #ffffff;
+        }
+
+        @keyframes logoGlow {
+            0% {
+                text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+                transform: scale(1);
+            }
+            100% {
+                text-shadow: 0 0 40px #00ffff, 0 0 80px #00ffff, 0 0 120px #00ffff;
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes subtitleFade {
+            0% { opacity: 0; transform: translateY(20px); }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes symbolRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tap-to-continue {
+            color: #ffaa00;
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(0.8rem, 2.5vw, 1.1rem);
+            margin-top: 40px;
+            animation: tapPulse 2s ease-in-out infinite;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px #ffaa0080;
+        }
+
+        @keyframes tapPulse {
+            0%, 100% { 
+                opacity: 0.6; 
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 1; 
+                transform: scale(1.05);
+                text-shadow: 0 0 25px #ffaa00;
+            }
+        }
+
+        .sound-toggle {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 100, 200, 0.7);
+            border: 1px solid #00ffff;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        /* Efecto de ripple para el splash */
+        .splash-ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 170, 0, 0.3);
+            pointer-events: none;
+            animation: rippleEffect 0.6s ease-out;
+        }
+
+        @keyframes rippleEffect {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="splashScreen" class="splash-screen">
+        <div class="logo-symbol"></div>
+        <div class="studio-logo">INKO GAME STUDIO</div>
+        <div class="studio-subtitle">Presenta</div>
+        <div class="tap-to-continue">Toca la pantalla para continuar</div>
+    </div>
+
+    <div class="game-container">
+        <button id="soundToggle" class="sound-toggle">🔊 SONIDO: ON</button>
+        
+        <div id="menu" class="menu">
+            <h1>👽 ALIEN FIGHTER 👽</h1>
+            <p style="margin-bottom: 15px; color: #00ffff; font-size: clamp(12px, 3vw, 16px);">¡Defiende la Tierra!</p>
+            
+            <div style="margin: 15px 0;">
+                <h3 style="color: #ffaa00; margin-bottom: 10px; font-size: clamp(14px, 3.5vw, 18px);">Dificultad:</h3>
+                <div class="difficulty-grid">
+                    <button class="difficulty-btn" data-difficulty="easy">FÁCIL</button>
+                    <button class="difficulty-btn" data-difficulty="medium">MEDIO</button>
+                    <button class="difficulty-btn" data-difficulty="hard">DIFÍCIL</button>
+                    <button class="difficulty-btn" data-difficulty="alien" style="background: linear-gradient(45deg, #660033, #cc0066);">ALIEN</button>
+                </div>
+            </div>
+            
+            <button id="selectShip" class="start-btn">SELECCIONAR NAVE</button>
+        </div>
+
+        <div id="shipSelection" class="menu" style="display: none;">
+            <h2 style="color: #ff0080; margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.8rem);">SELECCIONA TU NAVE</h2>
+            
+            <div class="ship-selection">
+                <div class="ship-card" data-ship="interceptor">
+                    <div class="ship-preview">
+                        <canvas width="50" height="50" class="ship-canvas" data-ship-type="interceptor"></canvas>
+                    </div>
+                    <div class="ship-info">
+                      <div class="ship-name">ESCARLET</div>
+                        <div class="ship-stats">
+                            <div>Velocidad: <div class="stat-bar"><div class="stat-fill stat-speed" style="width: 90%;"></div></div></div>
+                            <div>Daño: <div class="stat-bar"><div class="stat-fill stat-damage" style="width: 60%;"></div></div></div>
+                            <div>Resistencia: <div class="stat-bar"><div class="stat-fill stat-health" style="width: 50%;"></div></div></div>
+                            <div style="color: #00ff00; font-size: 10px; margin-top: 3px;">Arma: Láser Rápido</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ship-card" data-ship="fighter">
+                    <div class="ship-preview">
+                        <canvas width="50" height="50" class="ship-canvas" data-ship-type="fighter"></canvas>
+                    </div>
+                    <div class="ship-info">
+                       <div class="ship-name">ALPHA</div>
+                        <div class="ship-stats">
+                            <div>Velocidad: <div class="stat-bar"><div class="stat-fill stat-speed" style="width: 70%;"></div></div></div>
+                            <div>Daño: <div class="stat-bar"><div class="stat-fill stat-damage" style="width: 80%;"></div></div></div>
+                            <div>Resistencia: <div class="stat-bar"><div class="stat-fill stat-health" style="width: 70%;"></div></div></div>
+                            <div style="color: #00aaff; font-size: 10px; margin-top: 3px;">Arma: Cañones Duales</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ship-card" data-ship="destroyer">
+                    <div class="ship-preview">
+                        <canvas width="50" height="50" class="ship-canvas" data-ship-type="destroyer"></canvas>
+                    </div>
+                    <div class="ship-info">
+                        <div class="ship-name">DESTROYER</div>
+                        <div class="ship-stats">
+                            <div>Velocidad: <div class="stat-bar"><div class="stat-fill stat-speed" style="width: 50%;"></div></div></div>
+                            <div>Daño: <div class="stat-bar"><div class="stat-fill stat-damage" style="width: 100%;"></div></div></div>
+                            <div>Resistencia: <div class="stat-bar"><div class="stat-fill stat-health" style="width: 90%;"></div></div></div>
+                            <div style="color: #ff6600; font-size: 10px; margin-top: 3px;">Arma: Plasma Dual</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="confirmShip" class="start-btn">INICIAR MISIÓN</button>
+        </div>
+
+        <div id="intro" class="menu" style="display: none;">
+            <h2 style="color: #ff0080; margin-bottom: 20px; font-size: clamp(1.2rem, 4vw, 1.8rem);">BRIEFING DE MISIÓN</h2>
+            <div id="introText" style="max-height: 300px; overflow-y: auto; padding: 15px; background: rgba(0, 10, 20, 0.8); border: 1px solid #00ffff; margin: 15px 0; text-align: left; line-height: 1.6; font-size: clamp(12px, 2.8vw, 14px);">
+                <p style="color: #00ffff; margin-bottom: 15px;">📡 <strong>TRANSMISIÓN URGENTE DESDE EL COMANDO ESPACIAL</strong> 📡</p>
+                
+                <p style="color: #ffffff; margin-bottom: 12px;">En las profundidades del espacio, más allá de nuestro sistema solar, una raza alienígena hostil conocida como <span style="color: #ff0080;">Los Conquistadores del Vacío</span> ha comenzado su avance hacia la Tierra.</p>
+                
+                <p style="color: #ffffff; margin-bottom: 12px;">Sus naves nodriza han cruzado la frontera de Plutón, dejando a su paso estaciones espaciales destruidas y colonias en ruinas. Su único objetivo: <span style="color: #ff4400;">la conquista total de nuestro planeta</span>.</p>
+                
+                <p style="color: #ffffff; margin-bottom: 12px;">Pero la humanidad no se rendirá sin luchar. Un grupo de <span style="color: #00ff00;">pilotos rebeldes</span> ha tomado las armas, dispuestos a enfrentar esta amenaza con naves de combate experimentales.</p>
+                
+                <p style="color: #ffffff; margin-bottom: 12px;">Tú eres uno de estos valientes guerreros, piloto. Tu nave ha sido equipada con la última tecnología terrestre: cañones de plasma, escudos deflectores y propulsores cuánticos.</p>
+                
+                <p style="color: #ffaa00; margin-bottom: 12px;"><strong>TU MISIÓN:</strong></p>
+                <p style="color: #ffffff; margin-bottom: 8px;">• Defender las 5 zonas estratégicas del sistema solar</p>
+                <p style="color: #ffffff; margin-bottom: 8px;">• Eliminar las flotas invasoras en cada sector</p>
+                <p style="color: #ffffff; margin-bottom: 8px;">• Derrotar a los comandantes alienígenas</p>
+                <p style="color: #ffffff; margin-bottom: 12px;">• Proteger la Tierra a toda costa</p>
+                
+                <p style="color: #ff0000; margin-bottom: 15px;"><strong>⚠️ ADVERTENCIA:</strong> Los alienígenas han demostrado ser implacables. Sus naves madre están protegidas por escudos de energía desconocida y comandadas por inteligencias superiores.</p>
+                
+                <p style="color: #00ff00; text-align: center; font-weight: bold;">¡El destino de la humanidad está en tus manos, piloto!</p>
+                
+                <p style="color: #888888; text-align: center; margin-top: 20px; font-style: italic;">- Comando Espacial Terrestre -</p>
+            </div>
+            <button id="startGameFromIntro" class="start-btn">ACEPTAR MISIÓN</button>
+        </div>
+
+        <div id="missionComplete" class="mission-complete" style="display: none;">
+            <div style="text-align: center; background: rgba(0, 40, 20, 0.95); padding: 25px; border: 3px solid #00ff00; border-radius: 15px; max-width: 90vw;">
+                <h2 style="color: #00ff00; font-size: clamp(1.4rem, 5vw, 2.2rem); margin-bottom: 15px; text-shadow: 0 0 20px #00ff00;">✅ MISIÓN COMPLETADA</h2>
+                <h3 id="missionCompleteName" style="color: #ffaa00; font-size: clamp(1rem, 3.5vw, 1.6rem); margin-bottom: 20px;"></h3>
+                <p id="missionCompleteText" style="font-size: clamp(0.9rem, 3vw, 1.1rem); color: #00ffff; margin-bottom: 15px;"></p>
+                <p style="font-size: clamp(0.9rem, 3vw, 1.1rem); color: #ffffff; margin-bottom: 20px;">Puntuación: <strong style="color: #ffaa00;" id="missionScore">0</strong></p>
+                <button id="nextMissionBtn" class="continue-btn">SIGUIENTE MISIÓN</button>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="600" style="display: none;"></canvas>
+
+        <div id="hud" class="hud" style="display: none;">
+            <div>Puntos: <span id="score">0</span></div>
+            <div class="lives">Vidas: <span id="lives">3</span></div>
+            <div>Salud:</div>
+            <div class="health-bar">
+                <div id="healthFill" class="health-fill" style="width: 100%;"></div>
+            </div>
+        </div>
+
+        <div id="missionInfo" class="mission-info" style="display: none;">
+            <div>Misión: <span id="currentMission">1</span>/5</div>
+            <div>Enemigos: <span id="enemyCount">0</span></div>
+        </div>
+
+        <div id="bossHealth" class="boss-health">
+            <div style="font-size: clamp(10px, 2.5vw, 14px);">JEFE ALIENÍGENA</div>
+            <div class="boss-health-bar">
+                <div id="bossHealthFill" class="boss-health-fill" style="width: 100%;"></div>
+            </div>
+        </div>
+
+        <div id="mobileControls" class="mobile-controls">
+            <div class="movement-controls">
+                <button class="move-btn up" data-direction="up">▲</button>
+                <button class="move-btn down" data-direction="down">▼</button>
+                <button class="move-btn left" data-direction="left">◄</button>
+                <button class="move-btn right" data-direction="right">►</button>
+            </div>
+            
+            <div class="fire-controls">
+                <button class="fire-btn" id="fireBtn">🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AlienFighterMobile {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.difficulty = 'medium';
+                this.selectedShip = 'fighter'; // Nave por defecto
+                this.gameState = 'splash'; // Cambiar estado inicial a splash
+                this.score = 0;
+                this.lives = 3;
+                this.health = 100;
+                this.maxHealth = 100;
+                this.mission = 1;
+                this.enemiesKilled = 0;
+                this.enemiesInMission = 0;
+                this.bossActive = false;
+                this.boss = null;
+                this.bossDefeated = false;
+                this.soundEnabled = true;
+                this.bossExplosions = [];
+                this.splashSkipped = false;
+                
+                // Configuraciones de naves
+                this.shipConfigs = {
+                    interceptor: {
+                        name: 'Escarlet',
+                        speed: 6,
+                        fireRate: 120,
+                        damage: 1,
+                        health: 80,
+                        color: '#ff69b4',
+                        weaponType: 'rapid',
+                        bulletColor: '#ff1493',
+                        bulletSize: { width: 3, height: 6 }
+                    },
+                    fighter: {
+                        name: 'Alpha',
+                        speed: 4,
+                        fireRate: 150,
+                        damage: 2,
+                        health: 100,
+                        color: '#0088ff',
+                        weaponType: 'dual',
+                        bulletColor: '#00aaff',
+                        bulletSize: { width: 4, height: 8 }
+                    },
+                    destroyer: {
+                        name: 'Destroyer',
+                        speed: 3,
+                        fireRate: 200,
+                        damage: 3,
+                        health: 140,
+                        color: '#ff4400',
+                        weaponType: 'dual',
+                        bulletColor: '#ff4400',
+                        bulletSize: { width: 2, height: 4 }
+                    }
+                };
+                
+                // Audio mejorado
+                this.audioContext = null;
+                this.musicGain = null;
+                this.backgroundMusic = null;
+                
+                // Estado de controles móviles
+                this.mobileControls = {
+                    up: false,
+                    down: false,
+                    left: false,
+                    right: false,
+                    fire: false
+                };
+                
+                this.keys = {};
+                this.bullets = [];
+                this.enemies = [];
+                this.enemyBullets = [];
+                this.explosions = [];
+                this.stars = [];
+                this.powerUps = [];
+                this.doubleFire = false;
+                this.shieldActive = false;
+                
+                // Inicializar audio mejorado
+                this.initAudio();
+                
+                // Ajustar tamaño del canvas para móviles
+                this.resizeCanvas();
+                
+                this.player = {
+            visible: true,
+            respawning: false,
+                    x: this.canvas.width / 2 - 16,
+                    y: this.canvas.height - 100,
+                    width: 32,
+                    height: 32,
+                    speed: 4,
+                    fireRate: 10,
+                    lastShot: 0
+                };
+
+                this.difficultySettings = {
+                    easy: { enemySpeed: 1, enemyHealth: 1, playerDamage: 2, enemyCount: 12 },
+                    medium: { enemySpeed: 2, enemyHealth: 2, playerDamage: 1, enemyCount: 16 },
+                    hard: { enemySpeed: 3, enemyHealth: 3, playerDamage: 1, enemyCount: 20 },
+                    alien: { enemySpeed: 4, enemyHealth: 4, playerDamage: 1, enemyCount: 25 }
+                };
+
+                this.missionTexts = [
+                    {
+                        name: "Órbita Lunar",
+                        description: "Los alienígenas han establecido una base en la Luna. Elimina las patrullas exploradoras.",
+                        complete: "¡Excelente trabajo! La Luna ha sido liberada y las comunicaciones están restauradas."
+                    },
+                    {
+                        name: "Asteroides de Júpiter", 
+                        description: "Una flota enemiga se oculta entre los asteroides de Júpiter. Neutraliza la amenaza.",
+                        complete: "Las minas de asteroides están a salvo. Los recursos para la resistencia están asegurados."
+                    },
+                    {
+                        name: "Anillos de Saturno",
+                        description: "Los Conquistadores han fortificado los anillos de Saturno. Rompe sus defensas.",
+                        complete: "Los anillos de Saturno han sido liberados. Su red de comunicaciones está colapsando."
+                    },
+                    {
+                        name: "Nebulosa Oscura",
+                        description: "La nebulosa oculta la nave de comando enemiga. Encuentra y destruye al almirante alienígena.",
+                        complete: "¡El almirante ha caído! La flota enemiga está en retirada, pero aún queda el líder supremo."
+                    },
+                    {
+                        name: "Nave Madre Alien",
+                        description: "Enfréntate al Emperador Alien en su nave madre. Esta es la batalla final por la humanidad.",
+                        complete: "¡VICTORIA TOTAL! El Emperador ha sido derrotado y la invasión alien ha terminado."
+                    }
+                ];
+
+                this.setupEventListeners();
+                this.generateStars();
+                this.renderShipPreviews();
+                this.initSplashScreen(); // Inicializar splash screen mejorado
+                this.gameLoop();
+            }
+
+            initSplashScreen() {
+                // Función mejorada para manejar el splash screen
+                this.setupSplashInteraction();
+            }
+
+            setupSplashInteraction() {
+                const splashScreen = document.getElementById('splashScreen');
+                let isTransitioning = false;
+
+                const skipSplash = (e) => {
+                    if (isTransitioning || this.splashSkipped) return;
+                    
+                    // Crear efecto ripple en el punto de toque/click
+                    if (e.type === 'touchstart' || e.type === 'click') {
+                        this.createSplashRipple(e);
+                    }
+                    
+                    isTransitioning = true;
+                    this.splashSkipped = true;
+                    this.hideSplashScreen();
+                    
+                    // Remover listeners
+                    splashScreen.removeEventListener('click', skipSplash);
+                    splashScreen.removeEventListener('touchstart', skipSplash);
+                    document.removeEventListener('keydown', skipSplash);
+                };
+                
+                // Agregar múltiples formas de activar
+                splashScreen.addEventListener('click', skipSplash);
+                splashScreen.addEventListener('touchstart', skipSplash);
+                document.addEventListener('keydown', skipSplash); // Cualquier tecla también activa
+            }
+
+            createSplashRipple(e) {
+                const splashScreen = document.getElementById('splashScreen');
+                const ripple = document.createElement('div');
+                ripple.classList.add('splash-ripple');
+                
+                // Obtener coordenadas del toque/click
+                const rect = splashScreen.getBoundingClientRect();
+                const x = (e.clientX || e.touches[0].clientX) - rect.left;
+                const y = (e.clientY || e.touches[0].clientY) - rect.top;
+                
+                // Posicionar el ripple
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.style.width = '20px';
+                ripple.style.height = '20px';
+                ripple.style.marginLeft = '-10px';
+                ripple.style.marginTop = '-10px';
+                
+                splashScreen.appendChild(ripple);
+                
+                // Remover el ripple después de la animación
+                setTimeout(() => {
+                    if (ripple.parentNode) {
+                        ripple.parentNode.removeChild(ripple);
+                    }
+                }, 600);
+            }
+
+            hideSplashScreen() {
+                const splashScreen = document.getElementById('splashScreen');
+                splashScreen.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    splashScreen.style.display = 'none';
+                    this.gameState = 'menu';
+                }, 1000);
+            }
+
+            renderShipPreviews() {
+                document.querySelectorAll('.ship-canvas').forEach(canvas => {
+                    const ctx = canvas.getContext('2d');
+                    const shipType = canvas.getAttribute('data-ship-type');
+                    this.drawShipPreview(ctx, shipType, 25, 25, 20);
+                });
+            }
+
+            drawShipPreview(ctx, shipType, x, y, size) {
+                ctx.clearRect(0, 0, 50, 50);
+                
+                const scale = size / 32;
+                
+                switch(shipType) {
+                     case 'interceptor':
+            // 🚀 Nave Escarlet Mágica - corazón con alas y brillo ✨
+            ctx.save();
+            ctx.translate(x - 16, y - 6);
+
+            // Sombra / brillo exterior
+            ctx.shadowColor = '#ff66cc';
+            ctx.shadowBlur = 15;
+
+            // Cuerpo en forma de corazón
+            ctx.beginPath();
+            ctx.moveTo(16, 12);
+            ctx.bezierCurveTo(16, 7, 24, 7, 24, 12);  // curva derecha
+            ctx.bezierCurveTo(24, 17, 16, 20, 16, 26); // parte baja
+            ctx.bezierCurveTo(16, 20, 8, 17, 8, 12);  // curva izquierda
+            ctx.bezierCurveTo(8, 7, 16, 7, 16, 12);
+            ctx.closePath();
+
+            const gradient = ctx.createLinearGradient(8, 8, 24, 28);
+            gradient.addColorStop(0, '#ff99cc');   // rosa claro
+            gradient.addColorStop(0.5, '#ff33aa'); // fucsia
+            gradient.addColorStop(1, '#ff66ff');   // lila brillante
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Núcleo brillante en el centro
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(16, 16, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Alas mágicas
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ccf2ff'; // azul pastel
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(8, 14);
+            ctx.quadraticCurveTo(0, 12, 6, 20); // ala izquierda
+            ctx.lineTo(8, 18);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(24, 14);
+            ctx.quadraticCurveTo(32, 12, 26, 20); // ala derecha
+            ctx.lineTo(24, 18);
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Propulsores arcoíris
+            const plume = ctx.createLinearGradient(12, 30, 20, 40);
+            plume.addColorStop(0, '#ff66ff');
+            plume.addColorStop(0.5, '#66ccff');
+            plume.addColorStop(1, '#ffff99');
+            ctx.fillStyle = plume;
+            ctx.fillRect(13, 28, 3, 8);
+            ctx.fillRect(18, 28, 3, 8);
+
+            ctx.restore();
+            break;
+                        
+                   case 'fighter':
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Cuerpo principal azul
+            ctx.fillStyle = '#0088ff';
+            ctx.beginPath();
+            ctx.moveTo(0, -12);
+            ctx.lineTo(8, 8);
+            ctx.lineTo(0, 16);
+            ctx.lineTo(-8, 8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Alas laterales
+            ctx.fillStyle = '#0044aa';
+            ctx.beginPath();
+            ctx.moveTo(-12, 0);
+            ctx.lineTo(-6, 6);
+            ctx.lineTo(-12, 10);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(12, 0);
+            ctx.lineTo(6, 6);
+            ctx.lineTo(12, 10);
+            ctx.closePath();
+            ctx.fill();
+
+            // Cabina
+            ctx.fillStyle = '#66ccff';
+            ctx.beginPath();
+            ctx.arc(0, -4, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Motores traseros
+            ctx.fillStyle = '#00ccff';
+            ctx.fillRect(-4, 12, 3, 5);
+            ctx.fillRect(1, 12, 3, 5);
+
+            ctx.restore();
+            break;
+
+        case 'destroyer':
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Cuerpo principal robusto
+            ctx.fillStyle = '#cc3300';
+            ctx.beginPath();
+            ctx.moveTo(0, -14);
+            ctx.lineTo(12, 6);
+            ctx.lineTo(8, 16);
+            ctx.lineTo(-8, 16);
+            ctx.lineTo(-12, 6);
+            ctx.closePath();
+            ctx.fill();
+
+            // Detalle frontal (cañones)
+            ctx.fillStyle = '#ff6600';
+            ctx.fillRect(-6, -14, 3, 6);
+            ctx.fillRect(3, -14, 3, 6);
+
+            // Cabina central
+            ctx.fillStyle = '#ffaa00';
+            ctx.beginPath();
+            ctx.arc(0, -4, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Alas laterales gruesas
+            ctx.fillStyle = '#992200';
+            ctx.fillRect(-16, 0, 4, 10);
+            ctx.fillRect(12, 0, 4, 10);
+
+            // Motores traseros
+            ctx.fillStyle = '#ff3300';
+            ctx.fillRect(-6, 14, 4, 6);
+            ctx.fillRect(2, 14, 4, 6);
+
+            ctx.restore();
+            break;
+
+                }
+            }
+
+            initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.setupBackgroundMusic();
+                } catch (e) {
+                    console.warn('Audio no soportado');
+                    this.audioContext = null;
+                }
+            }
+
+            setupBackgroundMusic() {
+                if (!this.audioContext) return;
+                
+                // Crear gain node principal para música - VOLUMEN AUMENTADO SIGNIFICATIVAMENTE
+                this.musicGain = this.audioContext.createGain();
+                this.musicGain.connect(this.audioContext.destination);
+                this.musicGain.gain.setValueAtTime(0.6, this.audioContext.currentTime); // Aumentado de 0.1 a 0.6
+            }
+
+            startBackgroundMusic() {
+                if (!this.audioContext || !this.soundEnabled) return;
+                
+                this.stopBackgroundMusic();
+                
+                this.backgroundMusic = {
+                    oscillators: [],
+                    gains: [],
+                    interval: null
+                };
+                
+                // Crear múltiples osciladores para música compleja
+                const frequencies = [
+                    [130.81, 164.81, 196.00, 164.81, 174.61, 146.83, 130.81, 146.83], // Melodía C-E-G-E-F-D-C-D
+                    [65.41, 65.41, 87.31, 87.31, 98.00, 98.00, 65.41, 65.41] // Bajo C2-C2-F2-F2-G2-G2-C2-C2
+                ];
+                
+                let noteIndex = 0;
+                
+                // Crear loop musical
+                this.backgroundMusic.interval = setInterval(() => {
+                    if (!this.soundEnabled) return;
+                    
+                    // Melodía principal - VOLUMEN AUMENTADO
+                    this.playMusicNote(frequencies[0][noteIndex], 0.5, 'sine'); // Aumentado de 0.15 a 0.5
+                    
+                    // Bajo (cada dos beats) - VOLUMEN AUMENTADO
+                    if (noteIndex % 2 === 0) {
+                        this.playMusicNote(frequencies[1][Math.floor(noteIndex / 2)], 0.4, 'sawtooth'); // Aumentado de 0.12 a 0.4
+                    }
+                    
+                    noteIndex = (noteIndex + 1) % frequencies[0].length;
+                }, 1000);
+                
+                // Crear ambiente con osciladores continuos
+                this.createAmbientLayer();
+            }
+
+            createAmbientLayer() {
+                if (!this.audioContext || !this.musicGain) return;
+                
+                const ambientFreqs = [32.70, 49.00]; // C1, G1
+                
+                ambientFreqs.forEach((freq, index) => {
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+                    
+                    gain.gain.setValueAtTime(0.08, this.audioContext.currentTime); // Aumentado de 0.02 a 0.08
+                    
+                    osc.connect(gain);
+                    gain.connect(this.musicGain);
+                    
+                    osc.start();
+                    
+                    this.backgroundMusic.oscillators.push(osc);
+                    this.backgroundMusic.gains.push(gain);
+                });
+            }
+
+            playMusicNote(frequency, volume, type) {
+                if (!this.audioContext || !this.musicGain) return;
+                
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                
+                gain.gain.setValueAtTime(volume, this.audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.8);
+                
+                osc.connect(gain);
+                gain.connect(this.musicGain);
+                
+                osc.start();
+                osc.stop(this.audioContext.currentTime + 0.8);
+            }
+
+            stopBackgroundMusic() {
+                if (this.backgroundMusic) {
+                    // Detener osciladores
+                    this.backgroundMusic.oscillators.forEach(osc => {
+                        try {
+                            osc.stop();
+                        } catch (e) {
+                            // Oscilador ya detenido
+                        }
+                    });
+                    
+                    // Limpiar interval
+                    if (this.backgroundMusic.interval) {
+                        clearInterval(this.backgroundMusic.interval);
+                    }
+                    
+                    this.backgroundMusic = null;
+                }
+            }
+
+            playSound(frequency, duration, type = 'sine', volume = 0.1) {
+                if (!this.soundEnabled || !this.audioContext) return;
+                
+                try {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                    oscillator.type = type;
+                    
+                    gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + duration);
+                } catch (e) {
+                    console.warn('Error al reproducir sonido');
+                }
+            }
+
+            playLaserSound() {
+                this.playSound(800, 0.1, 'square', 0.05);
+            }
+
+            playExplosionSound() {
+                this.playSound(100, 0.3, 'sawtooth', 0.08);
+                setTimeout(() => this.playSound(150, 0.2, 'square', 0.05), 50);
+            }
+
+            playBossExplosionSound() {
+                this.playSound(80, 0.8, 'sawtooth', 0.12);
+                setTimeout(() => this.playSound(120, 0.6, 'square', 0.08), 100);
+                setTimeout(() => this.playSound(200, 0.4, 'sine', 0.06), 200);
+                setTimeout(() => this.playSound(60, 0.5, 'triangle', 0.04), 300);
+            }
+
+            playHitSound() {
+                this.playSound(300, 0.1, 'square', 0.03);
+            }
+
+            playPowerUpSound() {
+                this.playSound(500, 0.2, 'sine', 0.06);
+                setTimeout(() => this.playSound(700, 0.15, 'sine', 0.04), 100);
+            }
+
+            toggleSound() {
+                this.soundEnabled = !this.soundEnabled;
+                const btn = document.getElementById('soundToggle');
+                btn.textContent = this.soundEnabled ? '🔊 SONIDO: ON' : '🔇 SONIDO: OFF';
+                
+                if (this.soundEnabled && this.gameState === 'playing') {
+                    this.startBackgroundMusic();
+                } else {
+                    this.stopBackgroundMusic();
+                }
+            }
+
+            resizeCanvas() {
+                const maxWidth = Math.min(window.innerWidth - 20, 400);
+                const maxHeight = Math.min(window.innerHeight * 0.7, 600);
+                
+                this.canvas.width = maxWidth;
+                this.canvas.height = maxHeight;
+            }
+
+            setupEventListeners() {
+                // Toggle de sonido
+                document.getElementById('soundToggle').addEventListener('click', () => {
+                    this.toggleSound();
+                });
+
+                // Activar contexto de audio al primer toque/click
+                const activateAudio = () => {
+                    if (this.audioContext && this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                    document.removeEventListener('touchstart', activateAudio);
+                    document.removeEventListener('click', activateAudio);
+                };
+                document.addEventListener('touchstart', activateAudio);
+                document.addEventListener('click', activateAudio);
+
+                // Controles de teclado (para pruebas en escritorio)
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.key] = true;
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key] = false;
+                });
+
+                // Botones de dificultad
+                document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                    btn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('selected'));
+                        e.target.classList.add('selected');
+                        this.difficulty = e.target.dataset.difficulty;
+                    });
+                    
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('selected'));
+                        e.target.classList.add('selected');
+                        this.difficulty = e.target.dataset.difficulty;
+                    });
+                });
+
+                // Selección de nave
+                document.querySelectorAll('.ship-card').forEach(card => {
+                    card.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        document.querySelectorAll('.ship-card').forEach(c => c.classList.remove('selected'));
+                        e.currentTarget.classList.add('selected');
+                        this.selectedShip = e.currentTarget.dataset.ship;
+                    });
+                    
+                    card.addEventListener('click', (e) => {
+                        document.querySelectorAll('.ship-card').forEach(c => c.classList.remove('selected'));
+                        e.currentTarget.classList.add('selected');
+                        this.selectedShip = e.currentTarget.dataset.ship;
+                    });
+                });
+
+                // Botón seleccionar nave
+                document.getElementById('selectShip').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.showShipSelection();
+                });
+                
+                document.getElementById('selectShip').addEventListener('click', () => {
+                    this.showShipSelection();
+                });
+
+                // Botón confirmar nave
+                document.getElementById('confirmShip').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.showIntro();
+                });
+                
+                document.getElementById('confirmShip').addEventListener('click', () => {
+                    this.showIntro();
+                });
+
+                // Botón de inicio desde la introducción
+                document.getElementById('startGameFromIntro').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.startGame();
+                });
+                
+                document.getElementById('startGameFromIntro').addEventListener('click', () => {
+                    this.startGame();
+                });
+
+                // Botón de siguiente misión
+                document.getElementById('nextMissionBtn').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.nextMission();
+                });
+                
+                document.getElementById('nextMissionBtn').addEventListener('click', () => {
+                    this.nextMission();
+                });
+
+                // Controles móviles de movimiento
+                document.querySelectorAll('.move-btn').forEach(btn => {
+                    btn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        const direction = e.target.dataset.direction;
+                        this.mobileControls[direction] = true;
+                    });
+
+                    btn.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        const direction = e.target.dataset.direction;
+                        this.mobileControls[direction] = false;
+                    });
+
+                    btn.addEventListener('touchcancel', (e) => {
+                        e.preventDefault();
+                        const direction = e.target.dataset.direction;
+                        this.mobileControls[direction] = false;
+                    });
+                });
+
+                // Botón de disparo
+                const fireBtn = document.getElementById('fireBtn');
+                fireBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.mobileControls.fire = true;
+                });
+
+                fireBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.mobileControls.fire = false;
+                });
+
+                fireBtn.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    this.mobileControls.fire = false;
+                });
+
+                // Prevenir zoom con doble tap
+                document.addEventListener('touchend', (e) => {
+                    if (e.touches.length > 1) {
+                        e.preventDefault();
+                    }
+                });
+
+                // Redimensionar canvas al rotar
+                window.addEventListener('resize', () => {
+                    this.resizeCanvas();
+                });
+            }
+
+            showShipSelection() {
+                document.getElementById('menu').style.display = 'none';
+                document.getElementById('shipSelection').style.display = 'block';
+                
+                // Seleccionar nave por defecto si no hay ninguna seleccionada
+                if (!document.querySelector('.ship-card.selected')) {
+                    document.querySelector(`[data-ship="${this.selectedShip}"]`).classList.add('selected');
+                }
+            }
+
+            showIntro() {
+                document.getElementById('shipSelection').style.display = 'none';
+                document.getElementById('intro').style.display = 'block';
+                
+                // Auto-scroll del texto si es necesario
+                const introText = document.getElementById('introText');
+                introText.scrollTop = 0;
+            }
+
+            startGame() {
+                this.gameState = 'playing';
+                this.score = 0;
+                this.lives = 3;
+                this.mission = 1;
+                this.enemiesKilled = 0;
+                this.bossActive = false;
+                this.bossDefeated = false;
+                this.bossExplosions = [];
+                
+                // Aplicar configuración de la nave seleccionada
+                const shipConfig = this.shipConfigs[this.selectedShip];
+                this.health = shipConfig.health;
+                this.maxHealth = shipConfig.health;
+                this.player.speed = shipConfig.speed;
+                this.player.fireRate = shipConfig.fireRate;
+                this.player.damage = shipConfig.damage;
+                
+                document.getElementById('intro').style.display = 'none';
+                document.getElementById('gameCanvas').style.display = 'block';
+                document.getElementById('hud').style.display = 'block';
+                document.getElementById('missionInfo').style.display = 'block';
+                document.getElementById('mobileControls').style.display = 'block';
+                
+                this.player.x = this.canvas.width / 2 - 16;
+                this.player.y = this.canvas.height - 100;
+                
+                // Iniciar música de fondo cuando comience el juego
+                if (this.soundEnabled) {
+                    this.startBackgroundMusic();
+                }
+                
+                this.startMission();
+            }
+
+            startMission() {
+                this.enemies = [];
+                this.bullets = [];
+                this.enemyBullets = [];
+                this.powerUps = [];
+                this.bossActive = false;
+                this.boss = null;
+                this.bossDefeated = false;
+                this.enemiesKilled = 0;
+                this.bossExplosions = [];
+                
+                // Ocultar barra del jefe al inicio de cada misión
+                this.hideBossHealth();
+                
+                const settings = this.difficultySettings[this.difficulty];
+                this.enemiesInMission = settings.enemyCount + (this.mission - 1) * 2;
+                
+                this.updateUI();
+                this.spawnEnemies();
+            }
+
+            showBossHealth() {
+                const bossHealthElement = document.getElementById('bossHealth');
+                bossHealthElement.classList.add('visible');
+            }
+
+            hideBossHealth() {
+                const bossHealthElement = document.getElementById('bossHealth');
+                bossHealthElement.classList.remove('visible');
+            }
+
+            showMissionComplete() {
+                const missionData = this.missionTexts[this.mission - 1];
+                document.getElementById('missionCompleteName').textContent = missionData.name;
+                document.getElementById('missionCompleteText').textContent = missionData.complete;
+                document.getElementById('missionScore').textContent = this.score;
+                document.getElementById('missionComplete').style.display = 'block';
+            }
+
+            nextMission() {
+                document.getElementById('missionComplete').style.display = 'none';
+                
+                if (this.mission >= 5) {
+                    this.victory();
+                } else {
+                    this.mission++;
+                    this.startMission();
+                }
+            }
+
+            
+            spawnEnemies() {
+                const settings = this.difficultySettings[this.difficulty];
+                const enemyCount = Math.min(4, this.enemiesInMission - this.enemiesKilled);
+                
+                for (let i = 0; i < enemyCount; i++) {
+                    // Probabilidades para cada tipo (normal > zigzag > circular > diagonal > heavy > kamikaze)
+                    const p = Math.random();
+                    let type = 'normal';
+                    if (p < 0.45) type = 'normal';
+                    else if (p < 0.65) type = 'zigzag';
+                    else if (p < 0.80) type = 'circular';
+                    else if (p < 0.90) type = 'diagonal';
+                    else if (p < 0.98) type = 'heavy';
+                    else type = 'kamikaze';
+                    
+                    this.enemies.push({
+                        x: Math.random() * (this.canvas.width - 30),
+                        y: -40 - i * 50,
+                        width: 25,
+                        height: 25,
+                        speed: settings.enemySpeed + Math.random() * 0.5,
+                        health: settings.enemyHealth,
+                        maxHealth: settings.enemyHealth,
+                        lastShot: 0,
+                        type: type
+                    });
+                }
+            }
+
+            spawnBoss() {
+                this.bossActive = true;
+                
+                const bossTypes = [
+                    { name: "Explorador Lunar", health: 50, pattern: 'circle' },
+                    { name: "Destructor de Asteroides", health: 100, pattern: 'zigzag' },
+                    { name: "Guardián de Saturno", health: 150, pattern: 'spiral' },
+                    { name: "Señor de la Nebulosa", health: 200, pattern: 'teleport' },
+                    { name: "Emperador Alien", health: 250, pattern: 'ultimate' }
+                ];
+                
+                const bossData = bossTypes[this.mission - 1];
+                this.boss = {
+                    x: this.canvas.width / 2 - 40,
+                    y: 50,
+                    width: 80,
+                    height: 60,
+                    speed: 1.5,
+                    health: bossData.health * (this.difficulty === 'alien' ? 1.3 : 1),
+                    maxHealth: bossData.health * (this.difficulty === 'alien' ? 1.3 : 1),
+                    lastShot: 0,
+                    pattern: bossData.pattern,
+                    name: bossData.name,
+                    patternTimer: 0,
+                    direction: 1,
+                    alive: true
+                };
+                
+                // Mostrar barra de salud del jefe
+                this.showBossHealth();
+            }
+
+            createBossExplosion(x, y) {
+                // Crear múltiples explosiones grandes para el jefe
+                for (let i = 0; i < 8; i++) {
+                    this.bossExplosions.push({
+                        x: x + (Math.random() - 0.5) * 100,
+                        y: y + (Math.random() - 0.5) * 80,
+                        radius: Math.random() * 20 + 15,
+                        timer: Math.random() * 10,
+                        maxTimer: 30,
+                        color: Math.random() > 0.5 ? '#ff0080' : '#ff4400'
+                    });
+                }
+                this.playBossExplosionSound();
+            }
+
+            update() {
+                if (this.gameState !== 'playing') return;
+
+                this.updatePlayer();
+                this.updateBullets();
+                this.updateEnemies();
+                this.updateEnemyBullets();
+                this.updateBoss();
+                this.updateExplosions();
+                this.updateBossExplosions();
+                this.updatePowerUps();
+                this.checkCollisions();
+                this.updateStars();
+
+                // CONDICIÓN CORREGIDA: Solo spawmear jefe si no ha sido derrotado
+                if (!this.bossActive && !this.bossDefeated && this.enemiesKilled >= this.enemiesInMission && this.enemies.length === 0) {
+                    this.spawnBoss();
+                }
+
+                if (!this.bossActive && !this.bossDefeated && this.enemies.length < 3 && this.enemiesKilled < this.enemiesInMission) {
+                    this.spawnEnemies();
+                }
+            }
+
+            updatePlayer() {
+                // Controles de teclado (fallback)
+                if (this.keys['ArrowLeft'] || this.mobileControls.left) {
+                    if (this.player.x > 0) this.player.x -= this.player.speed;
+                }
+                if (this.keys['ArrowRight'] || this.mobileControls.right) {
+                    if (this.player.x < this.canvas.width - this.player.width) this.player.x += this.player.speed;
+                }
+                if (this.keys['ArrowUp'] || this.mobileControls.up) {
+                    if (this.player.y > 0) this.player.y -= this.player.speed;
+                }
+                if (this.keys['ArrowDown'] || this.mobileControls.down) {
+                    if (this.player.y < this.canvas.height - this.player.height) this.player.y += this.player.speed;
+                }
+
+                if ((this.keys[' '] || this.mobileControls.fire) && Date.now() - this.player.lastShot > this.player.fireRate) {
+                    this.firePlayerWeapon();
+                    this.player.lastShot = Date.now();
+                    this.playLaserSound();
+                }
+            }
+
+            firePlayerWeapon() {
+                const shipConfig = this.shipConfigs[this.selectedShip];
+                const centerX = this.player.x + this.player.width / 2;
+                const baseY = this.player.y;
+                // Power-up: disparo doble temporal
+                if (this.doubleFire) {
+                    this.bullets.push({ x: centerX - 10, y: baseY, width: shipConfig.bulletSize.width, height: shipConfig.bulletSize.height, speed: 7, damage: this.player.damage, color: '#ffff66', type: 'double' });
+                    this.bullets.push({ x: centerX + 10, y: baseY, width: shipConfig.bulletSize.width, height: shipConfig.bulletSize.height, speed: 7, damage: this.player.damage, color: '#ffff66', type: 'double' });
+                    return;
+                }
+                
+                switch(shipConfig.weaponType) {
+                    case 'rapid': // Interceptor - Disparos rápidos individuales
+                        this.bullets.push({
+                            x: centerX - shipConfig.bulletSize.width / 2,
+                            y: baseY,
+                            width: shipConfig.bulletSize.width,
+                            height: shipConfig.bulletSize.height,
+                            speed: 8,
+                            damage: this.player.damage,
+                            color: shipConfig.bulletColor,
+                            type: 'single'
+                        });
+                        break;
+                        
+                    case 'dual': // Fighter - Doble disparo
+                        this.bullets.push({
+                            x: centerX - shipConfig.bulletSize.width / 2 - 8,
+                            y: baseY,
+                            width: shipConfig.bulletSize.width,
+                            height: shipConfig.bulletSize.height,
+                            speed: 6,
+                            damage: this.player.damage,
+                            color: shipConfig.bulletColor,
+                            type: 'dual'
+                        });
+                        this.bullets.push({
+                            x: centerX - shipConfig.bulletSize.width / 2 + 8,
+                            y: baseY,
+                            width: shipConfig.bulletSize.width,
+                            height: shipConfig.bulletSize.height,
+                            speed: 6,
+                            damage: this.player.damage,
+                            color: shipConfig.bulletColor,
+                            type: 'dual'
+                        });
+                        break;
+                        
+                    case 'spread': // Destroyer - Disparo disperso (3 balas)
+                        // Bala central
+                        this.bullets.push({
+                            x: centerX - shipConfig.bulletSize.width / 2,
+                            y: baseY,
+                            width: shipConfig.bulletSize.width,
+                            height: shipConfig.bulletSize.height,
+                            speed: 5,
+                            damage: this.player.damage,
+                            color: shipConfig.bulletColor,
+                            type: 'spread',
+                            angle: 0
+                        });
+                        // Bala izquierda (ángulo -15°)
+                        this.bullets.push({
+                            x: centerX - shipConfig.bulletSize.width / 2 - 5,
+                            y: baseY,
+                            width: shipConfig.bulletSize.width,
+                            height: shipConfig.bulletSize.height,
+                            speed: 5,
+                            damage: this.player.damage,
+                            color: shipConfig.bulletColor,
+                            type: 'spread',
+                            angle: -0.26 // -15 grados en radianes
+                        });
+                        // Bala derecha (ángulo +15°)
+                        this.bullets.push({
+                            x: centerX - shipConfig.bulletSize.width / 2 + 5,
+                            y: baseY,
+                            width: shipConfig.bulletSize.width,
+                            height: shipConfig.bulletSize.height,
+                            speed: 5,
+                            damage: this.player.damage,
+                            color: shipConfig.bulletColor,
+                            type: 'spread',
+                            angle: 0.26 // +15 grados en radianes
+                        });
+                        break;
+                }
+            }
+
+            updateBullets() {
+                this.bullets = this.bullets.filter(bullet => {
+                    // Mover balas según su tipo y ángulo
+                    if (bullet.type === 'spread' && bullet.angle !== 0) {
+                        // Movimiento diagonal para balas con ángulo
+                        bullet.x += Math.sin(bullet.angle) * bullet.speed;
+                        bullet.y -= Math.cos(bullet.angle) * bullet.speed;
+                    } else {
+                        // Movimiento vertical normal
+                        bullet.y -= bullet.speed;
+                    }
+                    
+                    // Mantener balas dentro de los límites laterales (para spread)
+                    return bullet.y > -bullet.height && 
+                           bullet.x > -bullet.width && 
+                           bullet.x < this.canvas.width + bullet.width;
+                });
+            }
+
+            
+            updateEnemies() {
+                this.enemies.forEach(enemy => {
+                    // Movimiento según tipo
+                    switch (enemy.type) {
+                        case 'zigzag':
+                            // zigzag lateral (basado en el tiempo)
+                            enemy.x += Math.sin((enemy.y + Date.now()/200) / 18) * 2.2;
+                            break;
+                        case 'circular':
+                            // movimiento oscilante más suave
+                            enemy.x += Math.sin(enemy.y / 22) * 2.0;
+                            break;
+                        
+                        case 'kamikaze':
+                            // Enemigo kamikaze - diseño agresivo
+                            this.ctx.fillStyle = '#ff2255';
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(enemy.x + enemy.width/2, enemy.y);
+                            this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height);
+                            this.ctx.lineTo(enemy.x, enemy.y + enemy.height);
+                            this.ctx.closePath();
+                            this.ctx.fill();
+                            // detalle central
+                            this.ctx.fillStyle = '#ff77aa';
+                            this.ctx.fillRect(enemy.x + enemy.width/2 - 3, enemy.y + 6, 6, 6);
+                            break;
+    case 'diagonal':
+                            // ligera deriva diagonal
+                            enemy.x += Math.sin(Date.now()/300) * 1.2;
+                            break;
+                        case 'heavy':
+                            // enemigo pesado, se mueve lento con oscilación pequeña
+                            enemy.x += Math.sin(Date.now()/400) * 1.0;
+                            break;
+                        case 'kamikaze':
+                            // persigue suavemente la x del jugador para intentar chocar
+                            const targetX = this.player.x + this.player.width / 2;
+                            const centerX = enemy.x + enemy.width / 2;
+                            const dx = targetX - centerX;
+                            if (Math.abs(dx) > 2) enemy.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.02 + 0.6, enemy.speed * 0.9);
+                            break;
+                        default:
+                            // normal: movimiento recto
+                            break;
+                    }
+
+                    // Evitar que salgan de los límites horizontales
+                    enemy.x = Math.max(0, Math.min(this.canvas.width - enemy.width, enemy.x));
+
+                    // Avanzan hacia abajo
+                    enemy.y += enemy.speed;
+
+                    // Disparo aleatorio con probabilidad dependiendo del tipo
+                    let shootChance = 0.015;
+                    if (enemy.type === 'heavy') shootChance = 0.045;
+                    if (enemy.type === 'kamikaze') shootChance = 0.008;
+                    if (Date.now() - enemy.lastShot > 1000 && Math.random() < shootChance) {
+                        // Algunos enemigos disparan balas dirigidas si son avanzados
+                        const isTargeted = enemy.type === 'heavy' || enemy.type === 'kamikaze';
+                        this.enemyBullets.push({
+                            x: enemy.x + enemy.width / 2 - 2,
+                            y: enemy.y + enemy.height,
+                            width: 3,
+                            height: 6,
+                            speed: isTargeted ? 3.2 : 2.5,
+                            damage: isTargeted ? 10 : 8,
+                            isTargeted: isTargeted
+                        });
+                        enemy.lastShot = Date.now();
+                    }
+                });
+
+                this.enemies = this.enemies.filter(enemy => enemy.y < this.canvas.height + 50);
+            }
+
+            updateBoss() {
+                if (!this.boss || !this.boss.alive) return;
+
+                this.boss.patternTimer++;
+
+                switch (this.boss.pattern) {
+                    case 'circle':
+                        this.boss.x += Math.sin(this.boss.patternTimer * 0.04) * 2;
+                        break;
+                    case 'zigzag':
+                        this.boss.x += this.boss.direction * 1.5;
+                        if (this.boss.x <= 0 || this.boss.x >= this.canvas.width - this.boss.width) {
+                            this.boss.direction *= -1;
+                        }
+                        break;
+                    case 'spiral':
+                        this.boss.x += Math.sin(this.boss.patternTimer * 0.08) * 3;
+                        this.boss.y += Math.cos(this.boss.patternTimer * 0.04) * 1.5;
+                        this.boss.y = Math.max(20, Math.min(120, this.boss.y));
+                        break;
+                    case 'teleport':
+                        if (this.boss.patternTimer % 100 === 0) {
+                            this.boss.x = Math.random() * (this.canvas.width - this.boss.width);
+                        }
+                        break;
+                    case 'ultimate':
+                        this.boss.x += Math.sin(this.boss.patternTimer * 0.06) * 2.5;
+                        if (this.boss.patternTimer % 50 === 0) {
+                            this.boss.y = 30 + Math.sin(this.boss.patternTimer * 0.015) * 40;
+                        }
+                        break;
+                }
+
+                if (Date.now() - this.boss.lastShot > 1000) {
+                    const shots = this.mission >= 3 ? 2 : 1;
+                    
+                    for (let i = 0; i < shots; i++) {
+                        this.enemyBullets.push({
+                            x: this.boss.x + this.boss.width / 2 + (i - Math.floor(shots/2)) * 15,
+                            y: this.boss.y + this.boss.height,
+                            width: 5,
+                            height: 10,
+                            speed: 3,
+                            damage: 12
+                        });
+                    }
+                    this.boss.lastShot = Date.now();
+                }
+            }
+
+            updateEnemyBullets() {
+                this.enemyBullets = this.enemyBullets.filter(bullet => {
+                    bullet.y += bullet.speed;
+                    return bullet.y < this.canvas.height + bullet.height;
+                });
+            }
+
+            updateExplosions() {
+        // extendida para que dure más tiempo
+                this.explosions = this.explosions.filter(explosion => {
+                    explosion.timer++;
+                    explosion.radius += 1.2;
+                    return explosion.timer < 45;
+                });
+            }
+
+            updateBossExplosions() {
+                this.bossExplosions = this.bossExplosions.filter(explosion => {
+                    explosion.timer++;
+                    explosion.radius += 2;
+                    return explosion.timer < explosion.maxTimer;
+                });
+            }
+
+            updatePowerUps() {
+                this.powerUps = this.powerUps.filter(powerUp => {
+                    powerUp.y += 1.5;
+                    return powerUp.y < this.canvas.height + powerUp.height;
+                });
+            }
+
+            checkCollisions() {
+                this.bullets.forEach((bullet, bulletIndex) => {
+                    this.enemies.forEach((enemy, enemyIndex) => {
+                        if (this.isColliding(bullet, enemy)) {
+                            enemy.health -= bullet.damage;
+                            this.bullets.splice(bulletIndex, 1);
+                            this.playHitSound();
+                            
+                            if (enemy.health <= 0) {
+                                this.createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
+                                this.enemies.splice(enemyIndex, 1);
+                                this.enemiesKilled++;
+                                this.score += 100;
+                                this.playExplosionSound();
+                                
+                                if (Math.random() < 0.25) {
+                                    this.powerUps.push({ x: enemy.x, y: enemy.y, width: 15, height: 15, type: ['health','shield','double','speed'][Math.floor(Math.random()*4)] });
+                                }
+                            }
+                        }
+                    });
+
+                    if (this.boss && this.boss.alive && this.isColliding(bullet, this.boss)) {
+                        this.boss.health -= bullet.damage;
+                        this.bullets.splice(bulletIndex, 1);
+                        this.playHitSound();
+                        
+                        if (this.boss.health <= 0) {
+                            this.boss.alive = false;
+                            this.bossDefeated = true;
+                            this.createBossExplosion(this.boss.x + this.boss.width/2, this.boss.y + this.boss.height/2);
+                            this.score += 1000;
+                            
+                            // ELIMINACIÓN COMPLETA DEL JEFE DESPUÉS DE LA EXPLOSIÓN
+                            setTimeout(() => {
+                                this.boss = null;
+                                this.bossActive = false;
+                                this.hideBossHealth();
+                                this.completeMission();
+                            }, 2000);
+                        }
+                    }
+                });
+
+                
+                this.enemyBullets.forEach((bullet, bulletIndex) => {
+                    if (this.isColliding(bullet, this.player)) {
+                        // Si el jugador tiene escudo activo, se anula el daño pero se destruye la bala
+                        if (this.shieldActive) {
+                            this.enemyBullets.splice(bulletIndex, 1);
+                            this.playHitSound();
+                            return;
+                        }
+
+                        this.health -= bullet.damage;
+                        this.enemyBullets.splice(bulletIndex, 1);
+                        this.playHitSound();
+                        
+                        if (this.health <= 0) {
+                            this.playerDeath();
+                        }
+                    }
+                });
+    
+
+                
+                this.powerUps.forEach((powerUp, index) => {
+                    if (this.isColliding(powerUp, this.player)) {
+                        // Efectos según tipo de power-up
+                        switch (powerUp.type) {
+                            case 'health':
+                                this.health = Math.min(this.maxHealth, this.health + 25);
+                                this.playPowerUpSound();
+                                break;
+                            case 'shield':
+                                this.shieldActive = true;
+                                this.playPowerUpSound();
+                                // Duración del escudo: 5 segundos
+                                setTimeout(() => { this.shieldActive = false; }, 5000);
+                                break;
+                            case 'double':
+                                this.doubleFire = true;
+                                this.playPowerUpSound();
+                                // Duración disparo doble: 7 segundos
+                                setTimeout(() => { this.doubleFire = false; }, 7000);
+                                break;
+                            case 'speed':
+                                this.player.speed += 2;
+                                this.playPowerUpSound();
+                                // Duración velocidad extra: 5 segundos
+                                setTimeout(() => { this.player.speed = Math.max(2, this.player.speed - 2); }, 5000);
+                                break;
+                            default:
+                                // por defecto: curar
+                                this.health = Math.min(this.maxHealth, this.health + 20);
+                                this.playPowerUpSound();
+                                break;
+                        }
+                        this.powerUps.splice(index, 1);
+                    }
+                });
+        
+
+                this.enemies.forEach(enemy => {
+                    if (this.isColliding(enemy, this.player)) {
+                        this.health -= 15;
+                        this.createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
+                        this.enemies.splice(this.enemies.indexOf(enemy), 1);
+                        this.playHitSound();
+                        
+                        if (this.health <= 0) {
+                            this.playerDeath();
+                        }
+                    }
+                });
+            }
+
+            isColliding(obj1, obj2) {
+                return obj1.x < obj2.x + obj2.width &&
+                       obj1.x + obj1.width > obj2.x &&
+                       obj1.y < obj2.y + obj2.height &&
+                       obj1.y + obj1.height > obj2.y;
+            }
+
+            createExplosion(x, y) {
+                this.explosions.push({
+                    x: x,
+                    y: y,
+                    radius: 3,
+                    timer: 0
+                });
+            }
+
+            playerDeath() {
+                this.lives--;
+                this.health = this.maxHealth; // Usar maxHealth de la nave
+                
+                if (this.lives <= 0) {
+                    this.gameOver();
+                } else {
+                    this.player.x = this.canvas.width / 2 - 16;
+                    this.player.y = this.canvas.height - 100;
+                }
+            }
+
+            completeMission() {
+                if (this.mission >= 5) {
+                    this.victory();
+                } else {
+                    this.showMissionComplete();
+                }
+            }
+
+            victory() {
+                this.gameState = 'victory';
+                
+                const overlay = document.createElement('div');
+                overlay.className = 'mission-complete';
+                overlay.innerHTML = `
+                    <div style="text-align: center; background: rgba(0, 40, 0, 0.95); padding: 30px; border: 3px solid #00ff00; border-radius: 15px; max-width: 90vw;">
+                        <h2 style="color: #00ff00; font-size: clamp(1.8rem, 6vw, 3rem); margin-bottom: 15px; text-shadow: 0 0 25px #00ff00;">🌟 ¡MISIÓN CUMPLIDA! 🌟</h2>
+                        <h3 style="color: #ffaa00; font-size: clamp(1.2rem, 4vw, 2rem); margin-bottom: 20px;">¡HAS SALVADO LA HUMANIDAD!</h3>
+                        <p style="font-size: clamp(0.9rem, 3vw, 1.2rem); color: #00ffff; margin-bottom: 15px;">La flota alienígena ha sido completamente destruida.</p>
+                        <p style="font-size: clamp(0.9rem, 3vw, 1.2rem); color: #ffffff; margin-bottom: 20px;">Puntuación Final: <strong style="color: #ffaa00;">${this.score}</strong></p>
+                        <p style="font-size: clamp(0.8rem, 2.5vw, 1rem); color: #00ffff; font-style: italic; margin-bottom: 25px;">Los invasores han sido expulsados del sistema solar. La Tierra está a salvo gracias a tu valentía, piloto.</p>
+                        <button onclick="location.reload()" class="continue-btn">NUEVA CAMPAÑA</button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            }
+
+            gameOver() {
+                this.gameState = 'gameOver';
+                
+                const overlay = document.createElement('div');
+                overlay.className = 'game-over';
+                overlay.innerHTML = `
+                    <h2 style="color: #ff0000; font-size: clamp(1.2rem, 4vw, 2rem);">GAME OVER</h2>
+                    <p style="font-size: clamp(0.9rem, 3vw, 1.2rem);">Puntuación: ${this.score}</p>
+                    <button onclick="location.reload()" class="control-btn" style="margin-top: 15px;">Intentar de Nuevo</button>
+                `;
+                document.body.appendChild(overlay);
+            }
+
+            updateStars() {
+                this.stars.forEach(star => {
+                    star.y += star.speed;
+                    if (star.y > this.canvas.height) {
+                        star.y = -5;
+                        star.x = Math.random() * this.canvas.width;
+                    }
+                });
+            }
+ 
+            generateStars() {
+              for (let i = 0; i < 80; i++) {
+        this.stars.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            speed: Math.random() * 2 + 0.3,
+            size: Math.random() * 2 + 0.3,
+            brightness: Math.random() * 0.8 + 0.2,
+            twinkle: Math.random() * 100,
+            type: 'normal'
+        });
+    }
+
+    // Estrellas brillantes que titilan
+    for (let i = 0; i < 15; i++) {
+        this.stars.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            speed: Math.random() * 1.5 + 0.2,
+            size: Math.random() * 3 + 1,
+            brightness: 1,
+            twinkle: Math.random() * 100,
+            type: 'bright',
+            color: ['#ffffff', '#ffeeaa', '#aaeeff', '#ffaaff'][Math.floor(Math.random() * 4)]
+        });
+    }
+            }
+generateComets() {
+                this.comets = [];
+                
+                // Generar 3-4 cometas iniciales
+                for (let i = 0; i < 3; i++) {
+                    this.createComet();
+                }
+            }
+createComet() {
+                const side = Math.random() < 0.5 ? 'left' : 'top';
+                let startX, startY, angle, speed;
+                
+                if (side === 'left') {
+                    startX = -50;
+                    startY = Math.random() * this.canvas.height * 0.3; // Solo en la parte superior
+                    angle = Math.random() * 0.8 + 0.2; // Ángulo hacia abajo-derecha
+                    speed = Math.random() * 2 + 1.5;
+                } else {
+                    startX = Math.random() * this.canvas.width;
+                    startY = -50;
+                    angle = Math.PI / 2 + (Math.random() - 0.5) * 0.6; // Principalmente hacia abajo
+                    speed = Math.random() * 1.5 + 1;
+                }
+                
+                this.comets.push({
+                    x: startX,
+                    y: startY,
+                    angle: angle,
+                    speed: speed,
+                    size: Math.random() * 3 + 2,
+                    tailLength: Math.random() * 30 + 20,
+                    color: ['#ffffff', '#ffeecc', '#ccddff', '#ffccdd'][Math.floor(Math.random() * 4)],
+                    brightness: Math.random() * 0.5 + 0.5,
+                    trail: []
+                });
+            }
+            updateComets() {
+                this.comets.forEach((comet, index) => {
+                    // Guardar posición anterior para la cola
+                    comet.trail.unshift({ x: comet.x, y: comet.y });
+                    if (comet.trail.length > comet.tailLength) {
+                        comet.trail.pop();
+                    }
+                    
+                    // Mover cometa
+                    comet.x += Math.cos(comet.angle) * comet.speed;
+                    comet.y += Math.sin(comet.angle) * comet.speed;
+                    
+                    // Eliminar cometas que salieron de la pantalla
+                    if (comet.x > this.canvas.width + 100 || comet.y > this.canvas.height + 100) {
+                        this.comets.splice(index, 1);
+                    }
+                });
+                
+                // Generar nuevo cometa ocasionalmente
+                if (Math.random() < 0.003 && this.comets.length < 4) { // Baja probabilidad
+                    this.createComet();
+                }
+            }
+renderComets() {
+                this.comets.forEach(comet => {
+                    // Renderizar cola del cometa
+                    if (comet.trail.length > 1) {
+                        for (let i = 0; i < comet.trail.length - 1; i++) {
+                            const alpha = (comet.trail.length - i) / comet.trail.length;
+                            const size = (alpha * comet.size * 0.8);
+                            
+                            this.ctx.save();
+                            this.ctx.globalAlpha = alpha * comet.brightness * 0.6;
+                            this.ctx.fillStyle = comet.color;
+                            this.ctx.beginPath();
+                            this.ctx.arc(comet.trail[i].x, comet.trail[i].y, size, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            
+                            // Efecto de brillo en la cola
+                            if (i < 3) {
+                                this.ctx.globalAlpha = alpha * 0.3;
+                                this.ctx.fillStyle = '#ffffff';
+                                this.ctx.beginPath();
+                                this.ctx.arc(comet.trail[i].x, comet.trail[i].y, size * 0.5, 0, Math.PI * 2);
+                                this.ctx.fill();
+                            }
+                            this.ctx.restore();
+                        }
+                    }
+                    
+                    // Renderizar núcleo del cometa con brillo
+                    this.ctx.save();
+                    this.ctx.shadowColor = comet.color;
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.globalAlpha = comet.brightness;
+                    this.ctx.fillStyle = comet.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(comet.x, comet.y, comet.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Núcleo brillante central
+                    this.ctx.shadowBlur = 25;
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(comet.x, comet.y, comet.size * 0.4, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+            }
+updateUI() {
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('lives').textContent = this.lives;
+                document.getElementById('currentMission').textContent = this.mission;
+                document.getElementById('enemyCount').textContent = `${this.enemiesKilled}/${this.enemiesInMission}`;
+                document.getElementById('healthFill').style.width = `${(this.health / this.maxHealth) * 100}%`;
+                
+                if (this.boss && this.boss.alive) {
+                    document.getElementById('bossHealthFill').style.width = `${(this.boss.health / this.boss.maxHealth) * 100}%`;
+                }
+            }
+
+            renderBoss() {
+                if (!this.boss || !this.boss.alive) return;
+                
+                const x = this.boss.x;
+                const y = this.boss.y;
+                const w = this.boss.width;
+                const h = this.boss.height;
+                
+                switch(this.mission) {
+                    case 1: // Explorador Lunar - Forma de diamante
+                        this.ctx.fillStyle = '#888888';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + w/2, y);
+                        this.ctx.lineTo(x + w, y + h/2);
+                        this.ctx.lineTo(x + w/2, y + h);
+                        this.ctx.lineTo(x, y + h/2);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        
+                        // Centro brillante
+                        this.ctx.fillStyle = '#ffff00';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + w/2, y + h/4);
+                        this.ctx.lineTo(x + 3*w/4, y + h/2);
+                        this.ctx.lineTo(x + w/2, y + 3*h/4);
+                        this.ctx.lineTo(x + w/4, y + h/2);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        break;
+                        
+                    case 2: // Destructor de Asteroides - Forma de martillo
+                        this.ctx.fillStyle = '#ff4400';
+                        this.ctx.fillRect(x, y + h/3, w, h/3);
+                        this.ctx.fillStyle = '#cc3300';
+                        this.ctx.fillRect(x + w/4, y, w/2, h);
+                        this.ctx.fillStyle = '#ff6600';
+                        this.ctx.fillRect(x - 5, y + h/3 - 5, 15, h/3 + 10);
+                        this.ctx.fillRect(x + w - 10, y + h/3 - 5, 15, h/3 + 10);
+                        break;
+                        
+                    case 3: // Guardián de Saturno - Forma circular con anillos
+                        // Anillos exteriores
+                        this.ctx.strokeStyle = '#0088ff';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.beginPath();
+                        this.ctx.arc(x + w/2, y + h/2, w/2 + 10, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                        
+                        this.ctx.strokeStyle = '#0066cc';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.beginPath();
+                        this.ctx.arc(x + w/2, y + h/2, w/2 + 5, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                        
+                        // Cuerpo principal
+                        this.ctx.fillStyle = '#0044aa';
+                        this.ctx.beginPath();
+                        this.ctx.arc(x + w/2, y + h/2, w/2, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // Centro brillante
+                        this.ctx.fillStyle = '#00aaff';
+                        this.ctx.beginPath();
+                        this.ctx.arc(x + w/2, y + h/2, w/4, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                        
+                    case 4: // Señor de la Nebulosa - Forma orgánica ondulada
+                        this.ctx.fillStyle = '#800080';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x, y + h/2);
+                        for(let i = 0; i <= w; i += 5) {
+                            const wave1 = Math.sin((i + this.boss.patternTimer) * 0.1) * 8;
+                            const wave2 = Math.cos((i + this.boss.patternTimer) * 0.15) * 5;
+                            this.ctx.lineTo(x + i, y + h/4 + wave1);
+                        }
+                        for(let i = w; i >= 0; i -= 5) {
+                            const wave1 = Math.sin((i + this.boss.patternTimer) * 0.1) * 8;
+                            const wave2 = Math.cos((i + this.boss.patternTimer) * 0.15) * 5;
+                            this.ctx.lineTo(x + i, y + 3*h/4 + wave2);
+                        }
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        
+                        // Tentáculos
+                        this.ctx.strokeStyle = '#ff00ff';
+                        this.ctx.lineWidth = 4;
+                        for(let i = 0; i < 4; i++) {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(x + (i + 1) * w/5, y + h);
+                            const tentacleWave = Math.sin(this.boss.patternTimer * 0.08 + i) * 15;
+                            this.ctx.lineTo(x + (i + 1) * w/5 + tentacleWave, y + h + 20);
+                            this.ctx.stroke();
+                        }
+                        break;
+                        
+                    case 5: // Emperador Alien - Forma compleja de nave madre
+                        // Casco principal
+                        this.ctx.fillStyle = '#330000';
+                        this.ctx.fillRect(x + w/4, y, w/2, h * 0.8);
+                        
+                        // Alas laterales
+                        this.ctx.fillStyle = '#660000';
+                        this.ctx.fillRect(x, y + h/3, w/4, h/2);
+                        this.ctx.fillRect(x + 3*w/4, y + h/3, w/4, h/2);
+                        
+                        // Torre de comando
+                        this.ctx.fillStyle = '#990000';
+                        this.ctx.fillRect(x + 3*w/8, y - 10, w/4, 15);
+                        
+                        // Motores traseros
+                        this.ctx.fillStyle = '#ff0000';
+                        this.ctx.fillRect(x + w/4 - 5, y + h * 0.8, 10, h * 0.2);
+                        this.ctx.fillRect(x + 3*w/4 - 5, y + h * 0.8, 10, h * 0.2);
+                        
+                        // Detalles dorados
+                        this.ctx.fillStyle = '#ffaa00';
+                        this.ctx.fillRect(x + w/2 - 2, y + h/4, 4, h/2);
+                        this.ctx.fillRect(x + w/4, y + h/2 - 2, w/2, 4);
+                        
+                        // Ojos rojos brillantes
+                        this.ctx.fillStyle = '#ff0080';
+                        this.ctx.beginPath();
+                        this.ctx.arc(x + w/3, y + h/3, 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.beginPath();
+                        this.ctx.arc(x + 2*w/3, y + h/3, 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                }
+            }
+
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Fondo estrellado
+                this.ctx.fillStyle = '#ffffff';
+                this.stars.forEach(star => {
+                    this.ctx.fillRect(star.x, star.y, star.size, star.size);
+                });
+
+                if (this.gameState !== 'playing') return;
+
+                // Renderizar jugador según la nave seleccionada
+                this.renderPlayer();
+
+                // Balas del jugador con colores específicos por nave
+                this.bullets.forEach(bullet => {
+                    this.ctx.fillStyle = bullet.color || '#ffff00';
+                    this.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                    
+                    // Efecto de brillo para balas del destroyer
+                    if (bullet.type === 'spread') {
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.fillRect(bullet.x + 1, bullet.y + 1, Math.max(1, bullet.width - 2), Math.max(1, bullet.height - 2));
+                    }
+                });
+
+                // Enemigos con diseños diferentes según su tipo
+                this.enemies.forEach(enemy => {
+                    switch(enemy.type) {
+                        case 'heavy':
+                            // Enemigo pesado - más grande y resistente
+                            this.ctx.fillStyle = '#ff0080';
+                            this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                            this.ctx.fillStyle = '#cc0060';
+                            this.ctx.fillRect(enemy.x + 3, enemy.y + 3, enemy.width - 6, enemy.height - 6);
+                            // Añadir detalles de armadura
+                            this.ctx.fillStyle = '#ffffff';
+                            this.ctx.fillRect(enemy.x + 6, enemy.y + 6, 4, 4);
+                            this.ctx.fillRect(enemy.x + 15, enemy.y + 6, 4, 4);
+                            this.ctx.fillRect(enemy.x + 6, enemy.y + 15, 4, 4);
+                            this.ctx.fillRect(enemy.x + 15, enemy.y + 15, 4, 4);
+                            break;
+                            
+                        case 'zigzag':
+                            // Enemigo zigzag - forma más aerodinámica
+                            this.ctx.fillStyle = '#ff6600';
+                            this.ctx.fillRect(enemy.x + 6, enemy.y, 12, 4);
+                            this.ctx.fillStyle = '#ff8800';
+                            this.ctx.fillRect(enemy.x + 2, enemy.y + 4, 20, 8);
+                            this.ctx.fillStyle = '#ffaa00';
+                            this.ctx.fillRect(enemy.x, enemy.y + 12, enemy.width, 8);
+                            this.ctx.fillStyle = '#ffcc00';
+                            this.ctx.fillRect(enemy.x + 4, enemy.y + 20, 16, 4);
+                            // Alerones laterales
+                            this.ctx.fillStyle = '#ff4400';
+                            this.ctx.fillRect(enemy.x - 2, enemy.y + 8, 4, 8);
+                            this.ctx.fillRect(enemy.x + 23, enemy.y + 8, 4, 8);
+                            break;
+                            
+                        case 'circular':
+                            // Enemigo circular - forma redonda
+                            this.ctx.fillStyle = '#8800ff';
+                            this.ctx.beginPath();
+                            this.ctx.arc(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.width/2, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            this.ctx.fillStyle = '#aa00ff';
+                            this.ctx.beginPath();
+                            this.ctx.arc(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.width/3, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            this.ctx.fillStyle = '#cc00ff';
+                            this.ctx.beginPath();
+                            this.ctx.arc(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.width/5, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            break;
+                            
+                        case 'diagonal':
+                            // Enemigo diagonal - forma asimétrica
+                            this.ctx.fillStyle = '#00ff88';
+                            // Forma de flecha asimétrica
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(enemy.x + enemy.width/2, enemy.y);
+                            this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height/2);
+                            this.ctx.lineTo(enemy.x + enemy.width - 5, enemy.y + enemy.height);
+                            this.ctx.lineTo(enemy.x + 5, enemy.y + enemy.height);
+                            this.ctx.lineTo(enemy.x, enemy.y + enemy.height/2);
+                            this.ctx.closePath();
+                            this.ctx.fill();
+                            // Detalles internos
+                            this.ctx.fillStyle = '#00cc66';
+                            this.ctx.fillRect(enemy.x + 8, enemy.y + 8, 8, 8);
+                            break;
+                            
+                        case 'normal':
+                        default:
+                            // Enemigo normal - diseño original
+                            this.ctx.fillStyle = '#ff4400';
+                            this.ctx.fillRect(enemy.x + 8, enemy.y, 8, 4);
+                            this.ctx.fillStyle = '#ff6600';
+                            this.ctx.fillRect(enemy.x + 4, enemy.y + 4, 16, 8);
+                            this.ctx.fillStyle = '#ff8800';
+                            this.ctx.fillRect(enemy.x, enemy.y + 12, enemy.width, 6);
+                            this.ctx.fillStyle = '#ffaa00';
+                            this.ctx.fillRect(enemy.x + 6, enemy.y + 18, 12, 4);
+                            break;
+                    }
+                    
+                    // Mostrar barra de vida para enemigos dañados
+                    if (enemy.health < enemy.maxHealth) {
+                        const healthPercentage = enemy.health / enemy.maxHealth;
+                        this.ctx.fillStyle = '#ff0000';
+                        this.ctx.fillRect(enemy.x, enemy.y - 6, enemy.width, 2);
+                        this.ctx.fillStyle = '#00ff00';
+                        this.ctx.fillRect(enemy.x, enemy.y - 6, enemy.width * healthPercentage, 2);
+                    }
+                });
+
+                // Jefe (SOLO RENDERIZAR SI ESTÁ VIVO)
+                if (this.boss && this.boss.alive) {
+                    this.renderBoss();
+                }
+
+                // Balas enemigas con diferentes colores según tipo
+                this.enemyBullets.forEach(bullet => {
+                    if (bullet.isTargeted) {
+                        // Balas dirigidas - color diferente
+                        this.ctx.fillStyle = '#00ff88';
+                        this.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                        // Efecto de brillo
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.fillRect(bullet.x + 1, bullet.y + 1, Math.max(1, bullet.width - 2), Math.max(1, bullet.height - 2));
+                    } else {
+                        // Balas normales
+                        this.ctx.fillStyle = '#ff0000';
+                        this.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                    }
+                });
+
+                // Explosiones normales
+                this.explosions.forEach(explosion => {
+                    const colors = ['#ff0000', '#ff4400', '#ff8800', '#ffaa00', '#ffff00'];
+                    this.ctx.fillStyle = colors[Math.floor(explosion.timer / 3)] || '#ffff00';
+                    this.ctx.beginPath();
+                    this.ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+
+                // Explosiones del jefe (más grandes y espectaculares)
+                this.bossExplosions.forEach(explosion => {
+                    const alpha = 1 - (explosion.timer / explosion.maxTimer);
+                    this.ctx.save();
+                    this.ctx.globalAlpha = alpha;
+                    this.ctx.fillStyle = explosion.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Efecto de anillo exterior
+                    this.ctx.strokeStyle = explosion.color === '#ff0080' ? '#ffff00' : '#ffffff';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.stroke();
+                    this.ctx.restore();
+                });
+
+                
+                // Power-ups
+                this.powerUps.forEach(powerUp => {
+                    const colorMap = { health: '#66ff66', shield: '#55ffff', double: '#ffff66', speed: '#ff9966' };
+                    this.ctx.fillStyle = colorMap[powerUp.type] || '#00ffaa';
+                    this.ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+                    // Icono interior
+                    this.ctx.fillStyle = '#000000';
+                    this.ctx.fillRect(powerUp.x + 3, powerUp.y + 3, Math.max(4, powerUp.width - 6), Math.max(4, powerUp.height - 6));
+                });
+
+                this.updateUI();
+            
+            }
+
+            renderPlayer() {
+                const shipConfig = this.shipConfigs[this.selectedShip];
+                const x = this.player.x;
+                const y = this.player.y;
+                
+                switch(this.selectedShip) {
+                    case 'interceptor':
+            // 🚀 Escarlet mágica en gameplay
+            this.ctx.shadowColor = '#ff66cc';
+            this.ctx.shadowBlur = 20;
+
+            // Cuerpo en forma de corazón
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + 16, y + 12);
+            this.ctx.bezierCurveTo(x + 16, y + 7, x + 24, y + 7, x + 24, y + 12);  
+            this.ctx.bezierCurveTo(x + 24, y + 17, x + 16, y + 20, x + 16, y + 26); 
+            this.ctx.bezierCurveTo(x + 16, y + 20, x + 8, y + 17, x + 8, y + 12);  
+            this.ctx.bezierCurveTo(x + 8, y + 7, x + 16, y + 7, x + 16, y + 12);
+            this.ctx.closePath();
+
+            const gradient = this.ctx.createLinearGradient(x + 8, y + 8, x + 24, y + 28);
+            gradient.addColorStop(0, '#ff99cc');
+            gradient.addColorStop(0.5, '#ff33aa');
+            gradient.addColorStop(1, '#ff66ff');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fill();
+
+            // Núcleo brillante
+            this.ctx.shadowBlur = 30;
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.beginPath();
+            this.ctx.arc(x + 16, y + 16, 3, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Alas mágicas
+            this.ctx.shadowBlur = 0;
+            this.ctx.fillStyle = '#ccf2ff';
+            this.ctx.globalAlpha = 0.7;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + 8, y + 14);
+            this.ctx.quadraticCurveTo(x, y + 12, x + 6, y + 20);
+            this.ctx.lineTo(x + 8, y + 18);
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + 24, y + 14);
+            this.ctx.quadraticCurveTo(x + 32, y + 12, x + 26, y + 20);
+            this.ctx.lineTo(x + 24, y + 18);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.globalAlpha = 1;
+
+            // Propulsores arcoíris
+            const plume = this.ctx.createLinearGradient(x + 12, y + 30, x + 20, y + 40);
+            plume.addColorStop(0, '#ff66ff');
+            plume.addColorStop(0.5, '#66ccff');
+            plume.addColorStop(1, '#ffff99');
+            this.ctx.fillStyle = plume;
+            this.ctx.fillRect(x + 13, y + 28, 3, 8);
+            this.ctx.fillRect(x + 18, y + 28, 3, 8);
+            break;
+
+                        
+                    case 'fighter':
+                        // Nave Alpha - diseño de caza futurista
+                        // Cuerpo principal azul
+                        this.ctx.fillStyle = '#0088ff';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + 16, y);
+                        this.ctx.lineTo(x + 24, y + 16);
+                        this.ctx.lineTo(x + 16, y + 24);
+                        this.ctx.lineTo(x + 8, y + 16);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+
+                        // Alas laterales
+                        this.ctx.fillStyle = '#0044aa';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + 4, y + 8);
+                        this.ctx.lineTo(x + 10, y + 14);
+                        this.ctx.lineTo(x + 4, y + 18);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + 28, y + 8);
+                        this.ctx.lineTo(x + 22, y + 14);
+                        this.ctx.lineTo(x + 28, y + 18);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+
+                        // Cabina central
+                        this.ctx.fillStyle = '#66ccff';
+                        this.ctx.beginPath();
+                        this.ctx.arc(x + 16, y + 12, 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        // Motores traseros
+                        this.ctx.fillStyle = '#00ccff';
+                        this.ctx.fillRect(x + 12, y + 20, 3, 6);
+                        this.ctx.fillRect(x + 17, y + 20, 3, 6);
+                        break;
+                        
+                    case 'destroyer':
+                        // Nave Destroyer - diseño robusto y militar
+                        // Cuerpo principal robusto
+                        this.ctx.fillStyle = '#cc3300';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + 16, y);
+                        this.ctx.lineTo(x + 28, y + 14);
+                        this.ctx.lineTo(x + 24, y + 24);
+                        this.ctx.lineTo(x + 8, y + 24);
+                        this.ctx.lineTo(x + 4, y + 14);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+
+                        // Detalle frontal (cañones)
+                        this.ctx.fillStyle = '#ff6600';
+                        this.ctx.fillRect(x + 10, y, 3, 8);
+                        this.ctx.fillRect(x + 19, y, 3, 8);
+
+                        // Cabina central
+                        this.ctx.fillStyle = '#ffaa00';
+                        this.ctx.beginPath();
+                        this.ctx.arc(x + 16, y + 12, 5, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        // Alas laterales gruesas
+                        this.ctx.fillStyle = '#992200';
+                        this.ctx.fillRect(x, y + 8, 4, 12);
+                        this.ctx.fillRect(x + 28, y + 8, 4, 12);
+
+                        // Motores traseros
+                        this.ctx.fillStyle = '#ff3300';
+                        this.ctx.fillRect(x + 10, y + 22, 4, 8);
+                        this.ctx.fillRect(x + 18, y + 22, 4, 8);
+                        break;
+                }
+                
+                this.ctx.restore();
+            }
+
+            gameLoop() {
+                this.update();
+                this.render();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        // Iniciar el juego móvil
+        window.addEventListener('load', () => {
+            new AlienFighterMobile();
+        });
+    </script>
+</body>
+</html>
